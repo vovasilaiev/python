@@ -2,6 +2,44 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import pandas as pd
 from datetime import datetime
+import requests
+from bs4 import BeautifulSoup
+import os
+
+base_url = "https://www.muiv.ru"
+
+# Specific page with the schedules
+url = base_url + "/studentu/fakultet-it/raspisaniya/"
+
+# Function to download a file
+def download_file(download_url, file_name):
+    response = requests.get(download_url)
+    if response.status_code == 200:
+        with open(file_name, 'wb') as f:
+            f.write(response.content)
+        print(f"Downloaded {file_name}")
+    else:
+        print(f"Failed to download {file_name}")
+
+# Send a GET request
+response = requests.get(url)
+if response.status_code == 200:
+    # Parse the HTML
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Find the Бакалавриат block
+    bachelor_block = soup.find('div', class_='mb-5')
+    h2 = bachelor_block.find('h2')
+    if h2 and h2.text.strip() == "Бакалавриат":
+        download_items = bachelor_block.find_all('div', class_='download__item')
+        for item in download_items:
+            link = item.find('a', class_='download__src')
+            if link and 'href' in link.attrs and link['href'].endswith('.xls'):
+                file_url = base_url + link['href']
+                file_name = link.text.strip() + '.xls'  # Ensure the extension is correct
+                download_file(file_url, file_name)
+else:
+    print("Failed to retrieve the page")
 
 # Функция поиска расписания
 def find_schedule_by_teacher_name(teacher_name, file_path, sheet_names):
